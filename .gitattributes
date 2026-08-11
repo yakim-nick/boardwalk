@@ -1,0 +1,23 @@
+# Consistent line endings: LF everywhere, no auto CRLF conversions.
+* text=auto eol=lf
+
+# Source files (be explicit so .gitattributes wins over platform git config)
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.json  text eol=lf
+*.css   text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sql   text eol=lf
+
+# Binary files must never be normalized
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary

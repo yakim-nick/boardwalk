@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import { Board } from '../types';
 
+/** Dashboard: lists the user's boards and lets them create a new one. */
 export function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  /** Loads the board list on mount. */
   useEffect(() => {
     let cancelled = false;
     api
@@ -31,6 +33,7 @@ export function DashboardPage() {
     };
   }, []);
 
+  /** Creates a board and navigates straight into it. */
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;

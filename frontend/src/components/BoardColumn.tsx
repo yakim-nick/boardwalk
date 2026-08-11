@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { RefObject, useRef, useState } from 'react';
 import { Column, Task } from '../types';
 import { TaskCard } from './TaskCard';
 
@@ -11,6 +11,26 @@ interface BoardColumnProps {
   onAddTask: (column: Column) => void;
 }
 
+/**
+ * Computes the insertion index for a drop at `clientY` by comparing against
+ * the midpoint of each rendered card. Falls back to appending at the end.
+ */
+function computeDropTargetOrder(
+  listRef: RefObject<HTMLUListElement | null>,
+  clientY: number,
+  fallbackOrder: number
+): number {
+  const cards = listRef.current ? Array.from(listRef.current.children) : [];
+  for (let i = 0; i < cards.length; i++) {
+    const rect = (cards[i] as HTMLElement).getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      return i;
+    }
+  }
+  return fallbackOrder;
+}
+
+/** A single board column: header, task list, and drop/add-task handling. */
 export function BoardColumn({
   column,
   draggingTask,
@@ -22,6 +42,7 @@ export function BoardColumn({
   const [over, setOver] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
 
+  /** Resolves the drop position and delegates the move to the parent. */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setOver(false);
@@ -30,15 +51,7 @@ export function BoardColumn({
     const task = draggingTask;
     if (!task || task.id !== taskId) return;
 
-    const cards = listRef.current ? Array.from(listRef.current.children) : [];
-    let targetOrder = column.tasks.length;
-    for (let i = 0; i < cards.length; i++) {
-      const rect = (cards[i] as HTMLElement).getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) {
-        targetOrder = i;
-        break;
-      }
-    }
+    const targetOrder = computeDropTargetOrder(listRef, e.clientY, column.tasks.length);
     onDropTask(column.id, task, targetOrder);
   };
 

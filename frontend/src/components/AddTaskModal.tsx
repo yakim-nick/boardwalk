@@ -8,10 +8,12 @@ interface AddTaskModalProps {
   onSubmit: (title: string, description: string) => void;
 }
 
+/** Modal for creating a task in a specific column. */
 export function AddTaskModal({ column, submitting, onClose, onSubmit }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
+  /** Submits trimmed values; ignores empty titles. */
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;

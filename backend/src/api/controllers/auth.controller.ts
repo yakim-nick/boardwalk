@@ -18,40 +18,48 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+/**
+ * Wraps an async route handler so rejected promises are forwarded to the
+ * Express error middleware instead of crashing the process.
+ */
+function asyncHandler(
+  handler: (req: Request, res: Response) => Promise<void>
+): (req: Request, res: Response, next: NextFunction) => Promise<void> {
+  return async (req, res, next) => {
+    try {
+      await handler(req, res);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+/** HTTP handlers for the auth endpoints. */
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const input = registerSchema.parse(req.body);
-      const result = await this.auth.register(input);
-      res.status(201).json({ data: result });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** POST /auth/register — creates an account and returns a token. */
+  register = asyncHandler(async (req, res) => {
+    const input = registerSchema.parse(req.body);
+    const result = await this.auth.register(input);
+    res.status(201).json({ data: result });
+  });
 
-  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const input = loginSchema.parse(req.body);
-      const result = await this.auth.login(input);
-      res.json({ data: result });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** POST /auth/login — exchanges credentials for a token. */
+  login = asyncHandler(async (req, res) => {
+    const input = loginSchema.parse(req.body);
+    const result = await this.auth.login(input);
+    res.json({ data: result });
+  });
 
-  me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { userId } = req as Request & { userId: string };
-      const user = await this.auth.getPublicUser(userId);
-      if (!user) {
-        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
-        return;
-      }
-      res.json({ data: { user } });
-    } catch (err) {
-      next(err);
+  /** GET /auth/me — returns the currently authenticated user. */
+  me = asyncHandler(async (req, res) => {
+    const { userId } = req as Request & { userId: string };
+    const user = await this.auth.getPublicUser(userId);
+    if (!user) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+      return;
     }
-  };
+    res.json({ data: { user } });
+  });
 }

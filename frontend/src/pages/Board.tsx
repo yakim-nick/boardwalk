@@ -3,52 +3,75 @@ import { useParams, Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import { connectSocket } from '../api/socket';
-import { BoardWithColumns, Column, Task } from '../types';
+import { BoardWithColumns, Column, RealtimeEvent, Task } from '../types';
 import { BoardColumn } from '../components/BoardColumn';
 import { AddTaskModal } from '../components/AddTaskModal';
 
+/** Returns a copy of `tasks` sorted by their display order. */
 function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.order - b.order);
 }
 
+/** Adds a task to its column, keeping the column's tasks sorted. */
+function addTaskToColumn(columns: Column[], task: Task): Column[] {
+  const targetIdx = columns.findIndex((c) => c.id === task.columnId);
+  if (targetIdx === -1) return columns;
+  const next = [...columns];
+  next[targetIdx] = { ...next[targetIdx], tasks: sortTasks([...next[targetIdx].tasks, task]) };
+  return next;
+}
+
+/**
+ * Moves a task to its (possibly new) column: removes it from wherever it
+ * currently lives, then inserts it into the target column sorted by order.
+ */
+function moveTask(columns: Column[], task: Task): Column[] {
+  let found = false;
+  const withoutTask = columns.map((c) => {
+    if (c.tasks.some((t) => t.id === task.id)) {
+      found = true;
+      return { ...c, tasks: c.tasks.filter((t) => t.id !== task.id) };
+    }
+    return c;
+  });
+  if (!found) return columns;
+  const targetIdx = withoutTask.findIndex((c) => c.id === task.columnId);
+  if (targetIdx === -1) return columns;
+  withoutTask[targetIdx] = { ...withoutTask[targetIdx], tasks: sortTasks([...withoutTask[targetIdx].tasks, task]) };
+  return withoutTask;
+}
+
+/** Removes a task from every column by id. */
+function removeTask(columns: Column[], taskId: string): Column[] {
+  return columns.map((c) => ({ ...c, tasks: c.tasks.filter((t) => t.id !== taskId) }));
+}
+
+/**
+ * Applies a server-pushed realtime event to the local board state.
+ * Returns the same board reference when the event does not affect it.
+ */
 function applyRealtimeEvent(board: BoardWithColumns, type: string, data: Record<string, unknown>): BoardWithColumns {
-  const columns = [...board.columns];
   switch (type) {
     case 'task.created': {
       const task = data.task as Task;
-      const idx = columns.findIndex((c) => c.id === task.columnId);
-      if (idx === -1) return board;
-      columns[idx] = { ...columns[idx], tasks: sortTasks([...columns[idx].tasks, task]) };
-      return { ...board, columns };
+      const columns = addTaskToColumn(board.columns, task);
+      return columns === board.columns ? board : { ...board, columns };
     }
     case 'task.updated': {
       const task = data.task as Task;
-      let changed = false;
-      const next = columns.map((c) => {
-        if (c.tasks.some((t) => t.id === task.id)) {
-          changed = true;
-          return { ...c, tasks: c.tasks.filter((t) => t.id !== task.id) };
-        }
-        return c;
-      });
-      if (!changed) return board;
-      const targetIdx = next.findIndex((c) => c.id === task.columnId);
-      if (targetIdx === -1) return board;
-      next[targetIdx] = { ...next[targetIdx], tasks: sortTasks([...next[targetIdx].tasks, task]) };
-      return { ...board, columns: next };
+      const columns = moveTask(board.columns, task);
+      return columns === board.columns ? board : { ...board, columns };
     }
     case 'task.deleted': {
       const { taskId } = data as { taskId: string };
-      return {
-        ...board,
-        columns: columns.map((c) => ({ ...c, tasks: c.tasks.filter((t) => t.id !== taskId) })),
-      };
+      return { ...board, columns: removeTask(board.columns, taskId) };
     }
     default:
       return board;
   }
 }
 
+/** Renders a single board with drag-and-drop, realtime updates, and task creation. */
 export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { user, logout } = useAuth();
@@ -64,6 +87,7 @@ export function BoardPage() {
   const boardRef = useRef<BoardWithColumns | null>(null);
   boardRef.current = board;
 
+  /** Refetches the board from the API (used after reconnect and column adds). */
   const loadBoard = useCallback(async () => {
     if (!boardId) return;
     try {
@@ -75,6 +99,7 @@ export function BoardPage() {
     }
   }, [boardId]);
 
+  /** Initial board load. */
   useEffect(() => {
     if (!boardId) return;
     let cancelled = false;
@@ -95,32 +120,43 @@ export function BoardPage() {
     };
   }, [boardId]);
 
+  /** Routes realtime events into local state updates or refetches. */
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEvent) => {
+      if (event.type === 'subscribed') return;
+      if (event.type === 'reconnected') {
+        void loadBoard();
+        return;
+      }
+      if (event.type === 'task.created' || event.type === 'task.updated' || event.type === 'task.deleted') {
+        const current = boardRef.current;
+        if (!current || event.boardId !== current.id) return;
+        setBoard((prev) => (prev ? applyRealtimeEvent(prev, event.type, event.data) : prev));
+      } else if (event.type === 'column.added' && boardRef.current && event.boardId === boardRef.current.id) {
+        void loadBoard();
+      }
+    },
+    [loadBoard]
+  );
+
+  /** Opens the socket and subscribes to the current board. */
   useEffect(() => {
     if (!boardId) return;
     const disconnect = connectSocket(
       {
         onStatusChange: setConnected,
-        onEvent: (event) => {
-          if (event.type === 'subscribed') return;
-          if (event.type === 'reconnected') {
-            void loadBoard();
-            return;
-          }
-          if (event.type === 'task.created' || event.type === 'task.updated' || event.type === 'task.deleted') {
-            const current = boardRef.current;
-            if (!current || event.boardId !== current.id) return;
-            setBoard((prev) => (prev ? applyRealtimeEvent(prev, event.type, event.data) : prev));
-          } else if (event.type === 'column.added' && boardRef.current && event.boardId === boardRef.current.id) {
-            void loadBoard();
-          }
-        },
+        onEvent: handleRealtimeEvent,
       },
       boardId
     );
 
     return disconnect;
-  }, [boardId, loadBoard]);
+  }, [boardId, handleRealtimeEvent]);
 
+  /**
+   * Optimistically moves a task, then persists the move. On failure the
+   * optimistic state is rolled back by refetching the board.
+   */
   const moveTask = useCallback(
     async (columnId: string, task: Task, targetOrder: number) => {
       const boardId = boardRef.current?.id;
@@ -139,6 +175,7 @@ export function BoardPage() {
     [loadBoard]
   );
 
+  /** Creates a task in the column the modal was opened for. */
   const createTask = useCallback(
     async (title: string, description: string) => {
       const boardId = boardRef.current?.id;
@@ -157,6 +194,7 @@ export function BoardPage() {
     [modalColumn]
   );
 
+  /** Adds a column and refetches so the new column appears immediately. */
   const addColumn = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();

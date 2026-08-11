@@ -5,6 +5,7 @@ import { Redis } from 'ioredis';
 import { requireAuth } from '../middleware/auth';
 import { AuthService } from '../../domain/services/auth.service';
 
+/** Builds the `/auth` router with per-endpoint brute-force protection. */
 export function createAuthRouter(auth: AuthService, redis: Redis | null): Router {
   const router = Router();
   const controller = new AuthController(auth);

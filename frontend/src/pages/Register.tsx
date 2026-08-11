@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
+/** Registration form; on success stores the session and navigates to the dashboard. */
 export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();

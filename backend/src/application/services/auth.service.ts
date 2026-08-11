@@ -8,12 +8,21 @@ import { AuthService, AuthTokenPayload } from '../../domain/services/auth.servic
 
 const BCRYPT_ROUNDS = 10;
 
+/** Prisma error code for a unique-constraint violation. */
+const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+
+/**
+ * Concrete authentication service backed by a `UserRepository`.
+ * Handles password hashing, JWT signing/verification, and the
+ * user-facing (password-free) projection.
+ */
 export class AuthServiceImpl implements AuthService {
   constructor(
     private readonly users: UserRepository,
     private readonly env: Env
   ) {}
 
+  /** Creates an account and returns a signed token plus the public user. */
   async register(data: {
     name: string;
     email: string;
@@ -34,7 +43,7 @@ export class AuthServiceImpl implements AuthService {
       });
     } catch (err) {
       // Unique-constraint race: two concurrent registers with the same email.
-      if ((err as { code?: string }).code === 'P2002') {
+      if ((err as { code?: string }).code === UNIQUE_CONSTRAINT_VIOLATION) {
         throw new ConflictError('An account with this email already exists');
       }
       throw err;
@@ -43,6 +52,7 @@ export class AuthServiceImpl implements AuthService {
     return { token: this.signToken(user), user: toPublicUser(user) };
   }
 
+  /** Verifies credentials and returns a signed token plus the public user. */
   async login(data: { email: string; password: string }): Promise<{ token: string; user: PublicUser }> {
     const user = await this.users.findByEmail(data.email);
     if (!user) {
@@ -57,6 +67,7 @@ export class AuthServiceImpl implements AuthService {
     return { token: this.signToken(user), user: toPublicUser(user) };
   }
 
+  /** Validates a JWT and returns its claims, or throws if invalid/expired. */
   async verifyToken(token: string): Promise<AuthTokenPayload> {
     try {
       const decoded = jwt.verify(token, this.env.jwtSecret, {
@@ -73,11 +84,13 @@ export class AuthServiceImpl implements AuthService {
     }
   }
 
+  /** Loads a user by id without exposing password material. */
   async getPublicUser(id: string): Promise<PublicUser | null> {
     const user = await this.users.findById(id);
     return user ? toPublicUser(user) : null;
   }
 
+  /** Signs a JWT for the given user with the configured expiry and claims. */
   private signToken(user: User): string {
     const payload: AuthTokenPayload = { sub: user.id, email: user.email };
     const options: SignOptions = {
@@ -89,6 +102,7 @@ export class AuthServiceImpl implements AuthService {
   }
 }
 
+/** Strips sensitive fields (password hash) from a user entity. */
 export function toPublicUser(user: User): PublicUser {
   return { id: user.id, name: user.name, email: user.email };
 }

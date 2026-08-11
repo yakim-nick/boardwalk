@@ -10,6 +10,7 @@ const MAX_CLIENTS = 500;
 const MAX_SOCKETS_PER_USER = 8;
 const HEARTBEAT_MS = 30_000;
 
+/** A connected socket plus its authenticated identity and board subscriptions. */
 interface Client {
   id: string;
   ws: WebSocket;
@@ -46,6 +47,7 @@ export class RealtimeHub implements RealtimeEventPublisher {
     private readonly boards: BoardService
   ) {}
 
+  /** Wires up connection handling, the Redis relay, and the heartbeat loop. */
   start(): void {
     this.wss.on('connection', (ws, request) => {
       void this.handleConnection(ws, request);
@@ -57,16 +59,22 @@ export class RealtimeHub implements RealtimeEventPublisher {
     this.heartbeatTimer.unref();
   }
 
+  /** Publishes an event to the shared Redis channel for all instances to relay. */
   publish(event: RealtimeEvent): void {
     this.publisher
       .publish(CHANNEL, JSON.stringify(event))
       .catch((err) => this.logger.error({ err: err.message }, 'failed to publish event'));
   }
 
+  /** Number of currently connected sockets (used by tests and monitoring). */
   connectionCount(): number {
     return this.clients.size;
   }
 
+  /**
+   * Authenticates and registers a new socket, or closes it with a
+   * WebSocket close code explaining the rejection.
+   */
   private async handleConnection(ws: WebSocket, request: import('http').IncomingMessage): Promise<void> {
     try {
       if (this.clients.size >= MAX_CLIENTS) {
@@ -133,11 +141,10 @@ export class RealtimeHub implements RealtimeEventPublisher {
     }
   }
 
+  /** Routes an inbound client message to its handler. */
   private async handleMessage(client: Client, raw: RawData): Promise<void> {
-    let message: Record<string, unknown>;
-    try {
-      message = JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw.toString());
-    } catch {
+    const message = parseMessage(raw);
+    if (!message) {
       this.safeSend(client.ws, { type: 'error', message: 'Malformed message' });
       return;
     }
@@ -152,19 +159,7 @@ export class RealtimeHub implements RealtimeEventPublisher {
           this.safeSend(client.ws, { type: 'error', message: 'boardId is required' });
           return;
         }
-        try {
-          await this.boards.getBoard(boardId, client.userId);
-          client.boards.add(boardId);
-          let members = this.subscriptions.get(boardId);
-          if (!members) {
-            members = new Set<string>();
-            this.subscriptions.set(boardId, members);
-          }
-          members.add(client.id);
-          this.safeSend(client.ws, { type: 'subscribed', boardId });
-        } catch {
-          this.safeSend(client.ws, { type: 'error', message: 'You do not have access to this board' });
-        }
+        await this.handleSubscribe(client, boardId);
         return;
       }
       case 'unsubscribe': {
@@ -177,6 +172,27 @@ export class RealtimeHub implements RealtimeEventPublisher {
     }
   }
 
+  /**
+   * Registers a subscription after verifying the client owns the board.
+   * Replies with `subscribed` on success or an error otherwise.
+   */
+  private async handleSubscribe(client: Client, boardId: string): Promise<void> {
+    try {
+      await this.boards.getBoard(boardId, client.userId);
+      client.boards.add(boardId);
+      let members = this.subscriptions.get(boardId);
+      if (!members) {
+        members = new Set<string>();
+        this.subscriptions.set(boardId, members);
+      }
+      members.add(client.id);
+      this.safeSend(client.ws, { type: 'subscribed', boardId });
+    } catch {
+      this.safeSend(client.ws, { type: 'error', message: 'You do not have access to this board' });
+    }
+  }
+
+  /** Subscribes to the shared Redis channel and relays events to local sockets. */
   private async subscribeToChannel(): Promise<void> {
     await this.subscriber.subscribe(CHANNEL);
     this.subscriber.on('message', (_channel, raw) => {
@@ -189,6 +205,7 @@ export class RealtimeHub implements RealtimeEventPublisher {
     });
   }
 
+  /** Sends an event to every local socket subscribed to the event's board. */
   private broadcastToBoard(event: RealtimeEvent): void {
     const members = this.subscriptions.get(event.boardId);
     if (!members) return;
@@ -206,26 +223,30 @@ export class RealtimeHub implements RealtimeEventPublisher {
     }
   }
 
+  /** Removes a client from one board's subscription set. */
   private unsubscribe(client: Client, boardId: string): void {
     client.boards.delete(boardId);
-    const members = this.subscriptions.get(boardId);
-    if (members) {
-      members.delete(client.id);
-      if (members.size === 0) this.subscriptions.delete(boardId);
-    }
+    this.removeClientFromBoard(client.id, boardId);
   }
 
+  /** Removes a client from all boards and drops it from the client registry. */
   private unregister(client: Client): void {
     for (const boardId of client.boards) {
-      const members = this.subscriptions.get(boardId);
-      if (members) {
-        members.delete(client.id);
-        if (members.size === 0) this.subscriptions.delete(boardId);
-      }
+      this.removeClientFromBoard(client.id, boardId);
     }
     this.clients.delete(client.id);
   }
 
+  /** Deletes a client id from a board's member set, pruning empty sets. */
+  private removeClientFromBoard(clientId: string, boardId: string): void {
+    const members = this.subscriptions.get(boardId);
+    if (members) {
+      members.delete(clientId);
+      if (members.size === 0) this.subscriptions.delete(boardId);
+    }
+  }
+
+  /** Pings every client and terminates any that missed the previous ping. */
   private heartbeat(): void {
     for (const client of this.clients.values()) {
       if (!client.isAlive) {
@@ -242,14 +263,16 @@ export class RealtimeHub implements RealtimeEventPublisher {
     }
   }
 
+  /** Counts open sockets belonging to a user (enforces the per-user cap). */
   private countByUser(userId: string): number {
-    let n = 0;
+    let count = 0;
     for (const client of this.clients.values()) {
-      if (client.userId === userId) n += 1;
+      if (client.userId === userId) count += 1;
     }
-    return n;
+    return count;
   }
 
+  /** Accepts the handshake only when the Origin is in the allow-list. */
   private isOriginAllowed(request: import('http').IncomingMessage): boolean {
     const origin = request.headers.origin;
     if (!origin) return true; // non-browser client
@@ -259,6 +282,10 @@ export class RealtimeHub implements RealtimeEventPublisher {
     return list.includes(origin);
   }
 
+  /**
+   * Extracts the JWT from the handshake, preferring the Authorization header
+   * and falling back to the subprotocol token stashed by `handleProtocols`.
+   */
   private extractToken(request: import('http').IncomingMessage): string | null {
     const header = request.headers.authorization;
     if (header?.startsWith('Bearer ')) {
@@ -274,6 +301,7 @@ export class RealtimeHub implements RealtimeEventPublisher {
     return null;
   }
 
+  /** Sends a JSON payload if the socket is still open, swallowing errors. */
   private safeSend(ws: WebSocket, payload: unknown): void {
     if (ws.readyState === WebSocket.OPEN) {
       try {
@@ -285,6 +313,16 @@ export class RealtimeHub implements RealtimeEventPublisher {
   }
 }
 
+/** Parses a raw WebSocket frame into a JSON object, or null when malformed. */
+function parseMessage(raw: RawData): Record<string, unknown> | null {
+  try {
+    return JSON.parse(raw.toString()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/** Generates a short unique id for a client connection. */
 function randomToken(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

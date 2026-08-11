@@ -6,6 +6,7 @@ import { RealtimeEventPublisher } from '../../domain/services/realtime-publisher
 import { Redis } from 'ioredis';
 import { RequestHandler } from 'express';
 
+/** Builds the `/boards` router; every route requires authentication. */
 export function createBoardRouter(
   boards: BoardService,
   realtime: RealtimeEventPublisher,

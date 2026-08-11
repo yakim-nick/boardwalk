@@ -1,3 +1,10 @@
+/**
+ * Environment configuration.
+ *
+ * All configuration is loaded from `process.env` once at bootstrap and
+ * validated eagerly so misconfiguration fails fast instead of at request time.
+ */
+
 export interface Env {
   nodeEnv: 'development' | 'test' | 'production';
   host: string;
@@ -10,6 +17,7 @@ export interface Env {
   logLevel: string;
 }
 
+/** Known placeholder JWT secrets that must never be used in production. */
 const WEAK_SECRETS = new Set([
   'change-me-to-a-long-random-secret',
   'change-me-before-deploying',
@@ -19,6 +27,7 @@ const WEAK_SECRETS = new Set([
   'ci-test-secret',
 ]);
 
+/** Returns `value` or throws a descriptive error naming the missing variable. */
 function required(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -26,6 +35,10 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+/**
+ * Refuses to boot in production with a known placeholder or a too-short
+ * secret, since such secrets make JWT forging trivial.
+ */
 function assertStrongSecret(secret: string, nodeEnv: string): void {
   if (nodeEnv !== 'production') return;
   if (WEAK_SECRETS.has(secret) || secret.length < 32) {
@@ -36,6 +49,7 @@ function assertStrongSecret(secret: string, nodeEnv: string): void {
   }
 }
 
+/** Loads and validates configuration, optionally overriding fields (used by tests). */
 export function loadEnv(overrides: Partial<Env> = {}): Env {
   const nodeEnv = (process.env.NODE_ENV as Env['nodeEnv']) || 'development';
   const jwtSecret = required('JWT_SECRET', process.env.JWT_SECRET);
@@ -57,10 +71,15 @@ export function loadEnv(overrides: Partial<Env> = {}): Env {
   return { ...env, ...overrides };
 }
 
+/**
+ * Builds a Redis connection string that embeds the password
+ * (`redis://:password@host:port`) when a password is configured, while
+ * reusing the host/port portion of an already-supplied URL.
+ */
 function buildRedisUrl(url: string | undefined, password: string | undefined): string {
   if (!url) return 'redis://localhost:6379';
   if (!password) return url;
-  // redis://:password@host:port
+  // Drop the scheme and any existing userinfo, then prefix the password.
   const bare = url.replace(/^redis:\/\//, '').replace(/^[^@]*@/, '');
   return `redis://:${encodeURIComponent(password)}@${bare}`;
 }

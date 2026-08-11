@@ -21,85 +21,81 @@ const updateTaskSchema = z.object({
 });
 const addColumnSchema = z.object({ title: z.string().min(1).max(60) });
 
+/**
+ * Wraps an async route handler so rejected promises are forwarded to the
+ * Express error middleware instead of crashing the process.
+ */
+function asyncHandler(
+  handler: (req: AuthenticatedRequest, res: Response) => Promise<void>
+): (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void> {
+  return async (req, res, next) => {
+    try {
+      await handler(req, res);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+/** HTTP handlers for the board endpoints. */
 export class BoardController {
   constructor(
     private readonly boards: BoardService,
     private readonly realtime: RealtimeEventPublisher
   ) {}
 
-  createBoard = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const input = createBoardSchema.parse(req.body);
-      const board = await this.boards.createBoard({ name: input.name, ownerId: req.userId! });
-      res.status(201).json({ data: { board } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** POST /boards — creates a board owned by the authenticated user. */
+  createBoard = asyncHandler(async (req, res) => {
+    const input = createBoardSchema.parse(req.body);
+    const board = await this.boards.createBoard({ name: input.name, ownerId: req.userId! });
+    res.status(201).json({ data: { board } });
+  });
 
-  listBoards = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const boards = await this.boards.listBoards(req.userId!);
-      res.json({ data: { boards } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** GET /boards — lists the authenticated user's boards. */
+  listBoards = asyncHandler(async (req, res) => {
+    const boards = await this.boards.listBoards(req.userId!);
+    res.json({ data: { boards } });
+  });
 
-  getBoard = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { boardId } = boardIdSchema.parse(req.params);
-      const board = await this.boards.getBoard(boardId, req.userId!);
-      res.json({ data: { board } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** GET /boards/:boardId — loads a board with columns and tasks. */
+  getBoard = asyncHandler(async (req, res) => {
+    const { boardId } = boardIdSchema.parse(req.params);
+    const board = await this.boards.getBoard(boardId, req.userId!);
+    res.json({ data: { board } });
+  });
 
-  addColumn = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { boardId } = boardIdSchema.parse(req.params);
-      const input = addColumnSchema.parse(req.body);
-      const { board, event } = await this.boards.addColumn(boardId, req.userId!, input.title);
-      this.realtime.publish(event);
-      res.status(201).json({ data: { board } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** POST /boards/:boardId/columns — appends a column and broadcasts the event. */
+  addColumn = asyncHandler(async (req, res) => {
+    const { boardId } = boardIdSchema.parse(req.params);
+    const input = addColumnSchema.parse(req.body);
+    const { board, event } = await this.boards.addColumn(boardId, req.userId!, input.title);
+    this.realtime.publish(event);
+    res.status(201).json({ data: { board } });
+  });
 
-  createTask = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { boardId } = boardIdSchema.parse(req.params);
-      const input = createTaskSchema.parse(req.body);
-      const { task, event } = await this.boards.createTask(boardId, req.userId!, input);
-      this.realtime.publish(event);
-      res.status(201).json({ data: { task } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** POST /boards/:boardId/tasks — creates a task and broadcasts the event. */
+  createTask = asyncHandler(async (req, res) => {
+    const { boardId } = boardIdSchema.parse(req.params);
+    const input = createTaskSchema.parse(req.body);
+    const { task, event } = await this.boards.createTask(boardId, req.userId!, input);
+    this.realtime.publish(event);
+    res.status(201).json({ data: { task } });
+  });
 
-  updateTask = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { boardId, taskId } = taskIdSchema.parse(req.params);
-      const input = updateTaskSchema.parse(req.body);
-      const { task, event } = await this.boards.updateTask(boardId, req.userId!, taskId, input);
-      this.realtime.publish(event);
-      res.json({ data: { task } });
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** PATCH /boards/:boardId/tasks/:taskId — updates a task and broadcasts the event. */
+  updateTask = asyncHandler(async (req, res) => {
+    const { boardId, taskId } = taskIdSchema.parse(req.params);
+    const input = updateTaskSchema.parse(req.body);
+    const { task, event } = await this.boards.updateTask(boardId, req.userId!, taskId, input);
+    this.realtime.publish(event);
+    res.json({ data: { task } });
+  });
 
-  deleteTask = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { boardId, taskId } = taskIdSchema.parse(req.params);
-      const { event } = await this.boards.deleteTask(boardId, req.userId!, taskId);
-      this.realtime.publish(event);
-      res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  };
+  /** DELETE /boards/:boardId/tasks/:taskId — deletes a task and broadcasts the event. */
+  deleteTask = asyncHandler(async (req, res) => {
+    const { boardId, taskId } = taskIdSchema.parse(req.params);
+    const { event } = await this.boards.deleteTask(boardId, req.userId!, taskId);
+    this.realtime.publish(event);
+    res.status(204).send();
+  });
 }

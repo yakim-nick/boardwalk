@@ -10,6 +10,7 @@ if (!root) {
   throw new Error('Root element #root not found');
 }
 
+/** Application entry point: mounts the router + auth provider into #root. */
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>

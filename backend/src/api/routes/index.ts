@@ -7,6 +7,7 @@ import { RealtimeEventPublisher } from '../../domain/services/realtime-publisher
 import { Redis } from 'ioredis';
 import { RequestHandler } from 'express';
 
+/** Everything the API router needs to construct its sub-routers. */
 export interface ApiDependencies {
   auth: AuthService;
   boards: BoardService;
@@ -15,6 +16,7 @@ export interface ApiDependencies {
   authMiddleware: RequestHandler;
 }
 
+/** Builds the versioned API router (`/api/v1`) from its dependencies. */
 export function createApiRouter(deps: ApiDependencies): Router {
   const router = Router();
 

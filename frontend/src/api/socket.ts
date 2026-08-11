@@ -2,16 +2,36 @@ import { getToken } from './client';
 import { RealtimeEvent } from '../types';
 
 const WS_PROTOCOL = 'flowboard';
+const PING_INTERVAL_MS = 30_000;
+const MAX_RECONNECT_DELAY_MS = 15_000;
 
+/** Callbacks the socket invokes as events and connection state change. */
 export interface SocketHandlers {
   onEvent: (event: RealtimeEvent) => void;
   onStatusChange?: (connected: boolean) => void;
 }
 
+/** Builds the WebSocket URL for the current page origin. */
 function wsUrl(): string {
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 }
 
+/** Exponential backoff for reconnect attempts, capped at 15s. */
+function reconnectDelay(attempt: number): number {
+  return Math.min(1000 * 2 ** attempt, MAX_RECONNECT_DELAY_MS);
+}
+
+/**
+ * Opens a WebSocket connection to the realtime server and keeps it alive.
+ *
+ * - Authenticates via the subprotocol (`["flowboard", <jwt>]`) so the token
+ *   never appears in URLs or logs.
+ * - Sends periodic pings so the server can detect dead connections.
+ * - Reconnects with exponential backoff; after a reconnect the caller is
+ *   notified via a synthetic `reconnected` event so it can refetch state.
+ *
+ * Returns a disconnect function that stops reconnecting and closes the socket.
+ */
 export function connectSocket(
   handlers: SocketHandlers,
   subscribeTo?: string
@@ -26,7 +46,6 @@ export function connectSocket(
   const open = (): void => {
     if (closed) return;
 
-    // Authenticate via the WebSocket subprotocol to keep the JWT out of URLs and logs.
     const token = getToken();
     const protocols = token ? [WS_PROTOCOL, token] : [WS_PROTOCOL];
     const ws = new WebSocket(wsUrl(), protocols);
@@ -47,7 +66,7 @@ export function connectSocket(
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
         }
-      }, 30000);
+      }, PING_INTERVAL_MS);
     };
 
     ws.onmessage = (msg) => {
@@ -66,7 +85,7 @@ export function connectSocket(
       handlers.onStatusChange?.(false);
       if (pingTimer) window.clearInterval(pingTimer);
       if (!closed) {
-        const delay = Math.min(1000 * 2 ** retries, 15000);
+        const delay = reconnectDelay(retries);
         retries += 1;
         reconnectTimer = window.setTimeout(open, delay);
       }

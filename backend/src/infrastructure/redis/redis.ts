@@ -19,15 +19,18 @@ export class RedisProvider {
     this.subscriber.on('error', (err) => this.log('subscriber', err));
   }
 
+  /** Opens both connections; rejects if either fails to connect. */
   async connect(): Promise<void> {
     await Promise.all([this.client.connect(), this.subscriber.connect()]);
   }
 
+  /** Closes both connections. */
   async disconnect(): Promise<void> {
     this.client.disconnect();
     this.subscriber.disconnect();
   }
 
+  /** Logs a connection error tagged with which connection failed. */
   private log(name: string, err: Error): void {
     console.error(`[redis:${name}] ${err.message}`);
   }

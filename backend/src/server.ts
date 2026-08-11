@@ -1,6 +1,6 @@
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { loadEnv } from './config/env';
+import { loadEnv, Env } from './config/env';
 import { prisma } from './infrastructure/database/prisma';
 import { RedisProvider } from './infrastructure/redis/redis';
 import { PrismaUserRepository, PrismaBoardRepository } from './infrastructure/repositories/prisma.repositories';
@@ -20,26 +20,15 @@ const MAX_WS_PAYLOAD = 16 * 1024;
  * (dependency injection without a framework).
  */
 
-async function bootstrap(): Promise<void> {
-  const env = loadEnv();
-  const logger = pino({ level: env.logLevel, base: { service: 'flowboard-bootstrap' } });
-
-  const redis = new RedisProvider(env);
-  await redis.connect();
-
-  const userRepo = new PrismaUserRepository(prisma);
-  const boardRepo = new PrismaBoardRepository(prisma);
-
-  const auth = new AuthServiceImpl(userRepo, env);
-  const boards = new BoardServiceImpl(boardRepo);
-
-  const authMiddleware = requireAuth(auth);
-
-  const server = http.createServer();
-
+/**
+ * Creates the WebSocket server and negotiates the subprotocol.
+ * The client connects with `["flowboard", <jwt>]`; the token is stashed on
+ * the request so the realtime hub can authenticate the handshake.
+ */
+function createWebSocketServer(httpServer: http.Server, env: Env): WebSocketServer {
   const allowOrigins = env.corsOrigin === '*' ? [] : env.corsOrigin.split(',');
   const wss = new WebSocketServer({
-    server,
+    server: httpServer,
     path: '/ws',
     maxPayload: MAX_WS_PAYLOAD,
     handleProtocols: (protocols, request) => {
@@ -53,25 +42,19 @@ async function bootstrap(): Promise<void> {
     },
   });
   Object.assign(wss.options, { allowOrigins });
+  return wss;
+}
 
-  const realtime = new RealtimeHub(wss, redis.client, redis.subscriber, auth, boards);
-  realtime.start();
-
-  const api = createApiRouter({
-    auth,
-    boards,
-    realtime,
-    redis: redis.client,
-    authMiddleware,
-  });
-
-  const app = createApp({ env, api });
-  server.on('request', app);
-
-  server.listen(env.port, env.host, () => {
-    logger.info(`FlowBoard API listening on http://${env.host}:${env.port} (${env.nodeEnv})`);
-  });
-
+/**
+ * Registers SIGTERM/SIGINT handling. Terminates WebSocket clients first so
+ * `server.close` can complete, then disconnects Redis and Prisma.
+ */
+function registerGracefulShutdown(
+  wss: WebSocketServer,
+  server: http.Server,
+  redis: RedisProvider,
+  logger: pino.Logger
+): void {
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return;
@@ -102,6 +85,45 @@ async function bootstrap(): Promise<void> {
 
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGINT', () => void shutdown('SIGINT'));
+}
+
+async function bootstrap(): Promise<void> {
+  const env = loadEnv();
+  const logger = pino({ level: env.logLevel, base: { service: 'flowboard-bootstrap' } });
+
+  const redis = new RedisProvider(env);
+  await redis.connect();
+
+  const userRepo = new PrismaUserRepository(prisma);
+  const boardRepo = new PrismaBoardRepository(prisma);
+
+  const auth = new AuthServiceImpl(userRepo, env);
+  const boards = new BoardServiceImpl(boardRepo);
+
+  const authMiddleware = requireAuth(auth);
+
+  const server = http.createServer();
+  const wss = createWebSocketServer(server, env);
+
+  const realtime = new RealtimeHub(wss, redis.client, redis.subscriber, auth, boards);
+  realtime.start();
+
+  const api = createApiRouter({
+    auth,
+    boards,
+    realtime,
+    redis: redis.client,
+    authMiddleware,
+  });
+
+  const app = createApp({ env, api });
+  server.on('request', app);
+
+  server.listen(env.port, env.host, () => {
+    logger.info(`FlowBoard API listening on http://${env.host}:${env.port} (${env.nodeEnv})`);
+  });
+
+  registerGracefulShutdown(wss, server, redis, logger);
 }
 
 bootstrap().catch((err) => {

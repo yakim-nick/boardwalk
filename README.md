@@ -1,5 +1,7 @@
 # FlowBoard
 
+[![CI](https://github.com/yakim-nick/flowboard-app/actions/workflows/ci.yml/badge.svg)](https://github.com/yakim-nick/flowboard-app/actions/workflows/ci.yml)
+
 A realtime, collaborative kanban board for small teams. Built as a full-stack
 reference project: TypeScript end-to-end, layered (SOLID) backend architecture,
 server-side event fan-out over WebSockets, hardened with an agent code review

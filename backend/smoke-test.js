@@ -10,7 +10,8 @@ async function main() {
     body: JSON.stringify({ name: 'Smoke Tester', email, password: 'Password123' }),
   });
   const regBody = await register.json();
-  if (register.status !== 201) throw new Error(`register failed: ${register.status} ${JSON.stringify(regBody)}`);
+  if (register.status !== 201)
+    throw new Error(`register failed: ${register.status} ${JSON.stringify(regBody)}`);
   const token = regBody.data.token;
   console.log('1. register        -> 201, token ok');
 
@@ -30,7 +31,8 @@ async function main() {
     body: JSON.stringify({ name: 'Smoke Board' }),
   });
   const boardBody = await createBoard.json();
-  if (createBoard.status !== 201) throw new Error(`create board failed: ${createBoard.status} ${JSON.stringify(boardBody)}`);
+  if (createBoard.status !== 201)
+    throw new Error(`create board failed: ${createBoard.status} ${JSON.stringify(boardBody)}`);
   const boardId = boardBody.data.board.id;
 
   const detail = await fetch(`${BASE}/api/v1/boards/${boardId}`, {
@@ -38,7 +40,9 @@ async function main() {
   });
   const detailBody = await detail.json();
   const columns = detailBody.data.board.columns;
-  console.log(`3. create board    -> 201, id=${boardId.slice(0, 8)}…, ${columns.length} default columns`);
+  console.log(
+    `3. create board    -> 201, id=${boardId.slice(0, 8)}…, ${columns.length} default columns`
+  );
 
   const got = new Promise((resolve, reject) => {
     const ws = new WebSocket('ws://localhost:8080/ws', ['flowboard', token]);
@@ -51,7 +55,10 @@ async function main() {
         resolve(msg);
       }
     });
-    ws.on('error', (e) => { clearTimeout(timer); reject(e); });
+    ws.on('error', (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
     ws.on('open', () => {
       ws.send(JSON.stringify({ type: 'subscribe', boardId }));
     });
@@ -63,7 +70,8 @@ async function main() {
     body: JSON.stringify({ title: 'Realtime task', columnId: columns[0].id }),
   });
   const taskBody = await created.json();
-  if (created.status !== 201) throw new Error(`create task failed: ${created.status} ${JSON.stringify(taskBody)}`);
+  if (created.status !== 201)
+    throw new Error(`create task failed: ${created.status} ${JSON.stringify(taskBody)}`);
   console.log('4. create task     -> 201');
 
   const wsEvent = await got;
@@ -98,4 +106,9 @@ async function main() {
   console.log('\nALL SMOKE TESTS PASSED');
 }
 
-main().then(() => process.exit(0)).catch((e) => { console.error('SMOKE FAILED:', e.message); process.exit(1); });
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error('SMOKE FAILED:', e.message);
+    process.exit(1);
+  });

@@ -149,7 +149,11 @@ export class BoardServiceImpl implements BoardService {
   }
 
   /** Deletes a task and emits a `task.deleted` event. */
-  async deleteTask(boardId: string, userId: string, taskId: string): Promise<{ event: RealtimeEvent }> {
+  async deleteTask(
+    boardId: string,
+    userId: string,
+    taskId: string
+  ): Promise<{ event: RealtimeEvent }> {
     const board = await requireBoard(this.boards, boardId);
     this.assertOwnership(board, userId);
 
@@ -198,7 +202,10 @@ async function requireBoard(boards: BoardRepository, boardId: string): Promise<B
 }
 
 /** Loads a board with columns/tasks or throws `NotFoundError`. */
-async function requireBoardWithDetails(boards: BoardRepository, boardId: string): Promise<BoardWithDetails> {
+async function requireBoardWithDetails(
+  boards: BoardRepository,
+  boardId: string
+): Promise<BoardWithDetails> {
   const board = await boards.findWithColumnsAndTasks(boardId);
   if (!board) {
     throw new NotFoundError('Board not found');
@@ -234,7 +241,9 @@ async function requireColumn(
 }
 
 /** Builds the partial task update from the fields the client provided. */
-function buildTaskPatch(input: UpdateTaskInput): Partial<Pick<Task, 'title' | 'description' | 'order' | 'columnId'>> {
+function buildTaskPatch(
+  input: UpdateTaskInput
+): Partial<Pick<Task, 'title' | 'description' | 'order' | 'columnId'>> {
   const patch: Partial<Pick<Task, 'title' | 'description' | 'order' | 'columnId'>> = {};
   if (input.title !== undefined) patch.title = input.title.trim();
   if (input.description !== undefined) {
@@ -246,17 +255,16 @@ function buildTaskPatch(input: UpdateTaskInput): Partial<Pick<Task, 'title' | 'd
 }
 
 /** Rewrites task orders to 0..n-1 for every affected column. */
-async function normalizeOrdersForColumns(tx: BoardRepository, columnIds: Set<string>): Promise<void> {
+async function normalizeOrdersForColumns(
+  tx: BoardRepository,
+  columnIds: Set<string>
+): Promise<void> {
   for (const columnId of columnIds) {
     await tx.normalizeColumnOrders(columnId);
   }
 }
 
 /** Builds a realtime event stamped with the current time. */
-function makeEvent(
-  type: RealtimeEvent['type'],
-  boardId: string,
-  data: unknown
-): RealtimeEvent {
+function makeEvent(type: RealtimeEvent['type'], boardId: string, data: unknown): RealtimeEvent {
   return { type, boardId, data, at: new Date().toISOString() };
 }

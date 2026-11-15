@@ -1,5 +1,12 @@
 import request from 'supertest';
-import { buildTestApp, registerUser, createBoard, resetDb, AUTH_HEADER, TestContext } from './helpers';
+import {
+  buildTestApp,
+  registerUser,
+  createBoard,
+  resetDb,
+  AUTH_HEADER,
+  TestContext,
+} from './helpers';
 
 interface ColumnRef {
   id: string;
@@ -8,7 +15,10 @@ interface ColumnRef {
 }
 
 async function getColumns(ctx: TestContext, token: string, boardId: string): Promise<ColumnRef[]> {
-  const res = await request(ctx.app).get(`/api/v1/boards/${boardId}`).set(AUTH_HEADER(token)).expect(200);
+  const res = await request(ctx.app)
+    .get(`/api/v1/boards/${boardId}`)
+    .set(AUTH_HEADER(token))
+    .expect(200);
   return res.body.data.board.columns;
 }
 
@@ -58,7 +68,11 @@ describe('Tasks API', () => {
     }
 
     const updated = await getColumns(ctx, token, boardId);
-    expect(updated[0].tasks.map((t: { title: string }) => t.title)).toEqual(['Task 0', 'Task 1', 'Task 2']);
+    expect(updated[0].tasks.map((t: { title: string }) => t.title)).toEqual([
+      'Task 0',
+      'Task 1',
+      'Task 2',
+    ]);
   });
 
   it('rejects a task with an empty title', async () => {

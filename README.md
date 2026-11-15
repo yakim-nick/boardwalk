@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yakim-nick/flowboard-app/actions/workflows/ci.yml/badge.svg)](https://github.com/yakim-nick/flowboard-app/actions/workflows/ci.yml)
 
-A realtime, collaborative kanban board for small teams. Built as a full-stack
+A realtime kanban board with single-owner boards. Built as a full-stack
 reference project: TypeScript end-to-end, layered (SOLID) backend architecture,
 server-side event fan-out over WebSockets, hardened with an agent code review
 and a security audit, and shipped as a Docker Compose stack with optional
@@ -20,8 +20,8 @@ Kubernetes manifests and a CI pipeline.
 
 - Create an account and log in (JWT-based sessions).
 - Create boards with three default columns (To Do / In Progress / Done).
-- Add, edit, drag-and-drop, and delete cards; changes are visible to every
-  connected user in real time via WebSockets.
+- Add, edit, drag-and-drop, and delete cards; changes are pushed in real time
+  via WebSockets to every session (tab/device) of the board's owner.
 - Column ordering stays consistent even with concurrent edits (transactional
   order normalization).
 - The app enforces ownership: you can only see, edit, and move your own boards.
@@ -78,6 +78,17 @@ scripts/    helper scripts
 - **CI:** `.github/workflows/ci.yml` typechecks, audits, tests, and builds both
   apps and the Docker images.
 
-See [docs/technical.md](docs/technical.md) for architecture details and
-[docs/manager-hr-overview.md](docs/manager-hr-overview.md) for a non-technical
-summary.
+See [docs/technical.md](docs/technical.md) for architecture details.
+
+## Known limitations
+
+- **Boards are single-owner.** Only the owner can read or change a board, so
+  there is no multi-user collaboration yet; realtime updates reach only the
+  owner's own sessions.
+
+## Roadmap
+
+- Board sharing (members and roles) so several users can work on one board,
+  with realtime events delivered to all members.
+- `docs/INTERVIEW_NOTES.md` (public) with likely interview questions about
+  this project.

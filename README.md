@@ -90,5 +90,3 @@ See [docs/technical.md](docs/technical.md) for architecture details.
 
 - Board sharing (members and roles) so several users can work on one board,
   with realtime events delivered to all members.
-- `docs/INTERVIEW_NOTES.md` (public) with likely interview questions about
-  this project.

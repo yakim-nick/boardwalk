@@ -96,7 +96,7 @@ backend/    Express API: domain / application / infrastructure / api layers,
             Prisma schema and migrations, tests
 frontend/   React SPA, API client, WebSocket client
 infra/k8s/  Kubernetes manifests (Kustomize)
-docs/       technical.md (architecture notes)
+docs/       ARCHITECTURE.md (components, flows, design decisions)
 .github/    GitHub Actions CI
 ```
 
@@ -115,7 +115,7 @@ docs/       technical.md (architecture notes)
 - **JWT pinned** to HS256 with issuer and audience; the server refuses to start
   in production with a short or placeholder secret.
 
-More detail: [docs/technical.md](docs/technical.md).
+Full write-up with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Known limitations
 

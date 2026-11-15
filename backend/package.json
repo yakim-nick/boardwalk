@@ -1,7 +1,7 @@
 {
   "name": "flowboard-backend",
   "version": "1.0.0",
-  "description": "FlowBoard API — realtime kanban backend",
+  "description": "FlowBoard API \u2014 realtime kanban backend",
   "private": true,
   "main": "dist/server.js",
   "type": "commonjs",
@@ -14,7 +14,8 @@
     "prisma:generate": "prisma generate",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "jest --runInBand --coverage"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",

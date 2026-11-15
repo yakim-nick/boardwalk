@@ -21,6 +21,7 @@ async function main() {
   });
   const loginBody = await login.json();
   if (login.status !== 200) throw new Error(`login failed: ${login.status}`);
+  if (!loginBody.data || !loginBody.data.token) throw new Error('login returned no token');
   console.log('2. login           -> 200, token ok');
 
   const createBoard = await fetch(`${BASE}/api/v1/boards`, {

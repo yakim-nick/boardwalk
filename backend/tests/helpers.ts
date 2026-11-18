@@ -5,7 +5,10 @@ import { WebSocketServer } from 'ws';
 import { loadEnv, Env } from '../src/config/env';
 import { prisma } from '../src/infrastructure/database/prisma';
 import { RedisProvider } from '../src/infrastructure/redis/redis';
-import { PrismaUserRepository, PrismaBoardRepository } from '../src/infrastructure/repositories/prisma.repositories';
+import {
+  PrismaUserRepository,
+  PrismaBoardRepository,
+} from '../src/infrastructure/repositories/prisma.repositories';
 import { AuthServiceImpl } from '../src/application/services/auth.service';
 import { BoardServiceImpl } from '../src/application/services/board.service';
 import { RealtimeHub } from '../src/infrastructure/websocket/realtime';
@@ -78,7 +81,9 @@ export async function buildTestApp(): Promise<TestContext> {
 }
 
 export async function resetDb(): Promise<void> {
-  await prisma.$executeRawUnsafe('TRUNCATE TABLE "tasks", "columns", "boards", "users" RESTART IDENTITY CASCADE');
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "tasks", "columns", "boards", "users" RESTART IDENTITY CASCADE'
+  );
 }
 
 export async function registerUser(
@@ -86,7 +91,8 @@ export async function registerUser(
   overrides: { name?: string; email?: string; password?: string } = {}
 ): Promise<{ token: string; userId: string; email: string }> {
   const name = overrides.name ?? 'Test User';
-  const email = overrides.email ?? `user-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+  const email =
+    overrides.email ?? `user-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
   const password = overrides.password ?? 'Password123';
 
   const res = await request(ctx.app)

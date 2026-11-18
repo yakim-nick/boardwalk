@@ -1,4 +1,9 @@
-import { PrismaClient, User as PrismaUser, Board as PrismaBoard, Task as PrismaTask } from '@prisma/client';
+import {
+  PrismaClient,
+  User as PrismaUser,
+  Board as PrismaBoard,
+  Task as PrismaTask,
+} from '@prisma/client';
 import { Board, BoardWithDetails, Column, Task, User } from '../../domain/entities';
 import { BoardRepository, UserRepository } from '../../domain/repositories';
 
@@ -184,7 +189,9 @@ export class PrismaBoardRepository implements BoardRepository {
 
   /** Runs `work` atomically on a repository bound to the same DB transaction. */
   async runInTransaction<T>(work: (repo: BoardRepository) => Promise<T>): Promise<T> {
-    return this.db.$transaction(async (tx) => work(new PrismaBoardRepository(tx as unknown as PrismaClient)));
+    return this.db.$transaction(async (tx) =>
+      work(new PrismaBoardRepository(tx as unknown as PrismaClient))
+    );
   }
 }
 

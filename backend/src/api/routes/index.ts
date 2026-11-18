@@ -25,7 +25,10 @@ export function createApiRouter(deps: ApiDependencies): Router {
   });
 
   router.use('/auth', createAuthRouter(deps.auth, deps.redis));
-  router.use('/boards', createBoardRouter(deps.boards, deps.realtime, deps.redis, deps.authMiddleware));
+  router.use(
+    '/boards',
+    createBoardRouter(deps.boards, deps.realtime, deps.redis, deps.authMiddleware)
+  );
 
   return router;
 }

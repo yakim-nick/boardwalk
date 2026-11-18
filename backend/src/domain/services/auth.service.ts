@@ -14,7 +14,11 @@ export interface AuthTokenPayload {
  * so it can be swapped or mocked in tests.
  */
 export interface AuthService {
-  register(data: { name: string; email: string; password: string }): Promise<{ token: string; user: PublicUser }>;
+  register(data: {
+    name: string;
+    email: string;
+    password: string;
+  }): Promise<{ token: string; user: PublicUser }>;
   login(data: { email: string; password: string }): Promise<{ token: string; user: PublicUser }>;
   verifyToken(token: string): Promise<AuthTokenPayload>;
   getPublicUser(id: string): Promise<PublicUser | null>;

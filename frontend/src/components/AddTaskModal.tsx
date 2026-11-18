@@ -22,7 +22,13 @@ export function AddTaskModal({ column, submitting, onClose, onSubmit }: AddTaskM
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="add-task-title" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-task-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 id="add-task-title">Add task to “{column.title}”</h2>
         <form onSubmit={handleSubmit}>
           <label className="field">
@@ -52,7 +58,11 @@ export function AddTaskModal({ column, submitting, onClose, onSubmit }: AddTaskM
             <button className="btn btn-ghost" type="button" onClick={onClose}>
               Cancel
             </button>
-            <button className="btn btn-primary" type="submit" disabled={submitting || !title.trim()}>
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={submitting || !title.trim()}
+            >
               {submitting ? 'Adding…' : 'Add task'}
             </button>
           </div>

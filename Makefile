@@ -1,4 +1,4 @@
-.PHONY: coverage help install dev-backend dev-frontend migrate db-up db-down \
+.PHONY: coverage help lint format install dev-backend dev-frontend migrate db-up db-down \
         test test-backend test-frontend build docker-up docker-down \
         k8s-apply k8s-delete
 
@@ -11,6 +11,8 @@ help:
 	@echo "  make migrate          Apply Prisma migrations to local DB"
 	@echo "  make db-up            Start Postgres + Redis via docker compose"
 	@echo "  make db-down          Stop Postgres + Redis"
+	@echo "  make lint             ESLint + Prettier check (backend + frontend)"
+	@echo "  make format           Format code with Prettier"
 	@echo "  make test             Run backend + frontend tests"
 	@echo "  make test-backend     Run backend tests"
 	@echo "  make coverage         Run backend tests with a coverage report"
@@ -39,6 +41,14 @@ db-up:
 
 db-down:
 	docker compose down postgres redis
+
+lint:
+	cd backend && npm run lint && npm run format:check
+	cd frontend && npm run lint && npm run format:check
+
+format:
+	cd backend && npm run format
+	cd frontend && npm run format
 
 test: test-backend test-frontend
 

@@ -53,7 +53,10 @@ export class AuthServiceImpl implements AuthService {
   }
 
   /** Verifies credentials and returns a signed token plus the public user. */
-  async login(data: { email: string; password: string }): Promise<{ token: string; user: PublicUser }> {
+  async login(data: {
+    email: string;
+    password: string;
+  }): Promise<{ token: string; user: PublicUser }> {
     const user = await this.users.findByEmail(data.email);
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');

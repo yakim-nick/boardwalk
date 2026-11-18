@@ -1,5 +1,12 @@
 import request from 'supertest';
-import { buildTestApp, registerUser, createBoard, resetDb, AUTH_HEADER, TestContext } from './helpers';
+import {
+  buildTestApp,
+  registerUser,
+  createBoard,
+  resetDb,
+  AUTH_HEADER,
+  TestContext,
+} from './helpers';
 
 describe('Boards API', () => {
   let ctx: TestContext;
@@ -26,7 +33,10 @@ describe('Boards API', () => {
       .expect(201);
 
     const boardId = res.body.data.board.id;
-    const detail = await request(ctx.app).get(`/api/v1/boards/${boardId}`).set(AUTH_HEADER(token)).expect(200);
+    const detail = await request(ctx.app)
+      .get(`/api/v1/boards/${boardId}`)
+      .set(AUTH_HEADER(token))
+      .expect(200);
     const titles = detail.body.data.board.columns.map((c: { title: string }) => c.title);
     expect(titles).toEqual(['Backlog', 'In Progress', 'Done']);
   });
@@ -44,13 +54,19 @@ describe('Boards API', () => {
   it('rejects access to another user’s board', async () => {
     const other = await registerUser(ctx);
     const { boardId } = await createBoard(ctx, other.token, 'Private');
-    const res = await request(ctx.app).get(`/api/v1/boards/${boardId}`).set(AUTH_HEADER(token)).expect(403);
+    const res = await request(ctx.app)
+      .get(`/api/v1/boards/${boardId}`)
+      .set(AUTH_HEADER(token))
+      .expect(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 404 for a nonexistent board', async () => {
     const missing = '00000000-0000-0000-0000-000000000000';
-    const res = await request(ctx.app).get(`/api/v1/boards/${missing}`).set(AUTH_HEADER(token)).expect(404);
+    const res = await request(ctx.app)
+      .get(`/api/v1/boards/${missing}`)
+      .set(AUTH_HEADER(token))
+      .expect(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 

@@ -52,9 +52,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
-      - run: npm audit --audit-level=high
+      # Production dependencies only: the dev toolchain has an advisory with no fix available
+      # (picomatch ReDoS, every version affected). Dev tooling is covered by Dependabot.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npx prisma generate
       - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm run test:coverage
       - name: Coverage summary
         if: always()
@@ -90,8 +94,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
-      - run: npm audit --audit-level=high
+      # Production dependencies only: the dev toolchain has an advisory with no fix available
+      # (picomatch ReDoS, every version affected). Dev tooling is covered by Dependabot.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
 

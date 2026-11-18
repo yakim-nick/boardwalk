@@ -3,7 +3,10 @@ import { WebSocketServer } from 'ws';
 import { loadEnv, Env } from './config/env';
 import { prisma } from './infrastructure/database/prisma';
 import { RedisProvider } from './infrastructure/redis/redis';
-import { PrismaUserRepository, PrismaBoardRepository } from './infrastructure/repositories/prisma.repositories';
+import {
+  PrismaUserRepository,
+  PrismaBoardRepository,
+} from './infrastructure/repositories/prisma.repositories';
 import { AuthServiceImpl } from './application/services/auth.service';
 import { BoardServiceImpl } from './application/services/board.service';
 import { RealtimeHub } from './infrastructure/websocket/realtime';

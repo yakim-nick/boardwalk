@@ -37,7 +37,10 @@ function moveTask(columns: Column[], task: Task): Column[] {
   if (!found) return columns;
   const targetIdx = withoutTask.findIndex((c) => c.id === task.columnId);
   if (targetIdx === -1) return columns;
-  withoutTask[targetIdx] = { ...withoutTask[targetIdx], tasks: sortTasks([...withoutTask[targetIdx].tasks, task]) };
+  withoutTask[targetIdx] = {
+    ...withoutTask[targetIdx],
+    tasks: sortTasks([...withoutTask[targetIdx].tasks, task]),
+  };
   return withoutTask;
 }
 
@@ -50,7 +53,11 @@ function removeTask(columns: Column[], taskId: string): Column[] {
  * Applies a server-pushed realtime event to the local board state.
  * Returns the same board reference when the event does not affect it.
  */
-function applyRealtimeEvent(board: BoardWithColumns, type: string, data: Record<string, unknown>): BoardWithColumns {
+function applyRealtimeEvent(
+  board: BoardWithColumns,
+  type: string,
+  data: Record<string, unknown>
+): BoardWithColumns {
   switch (type) {
     case 'task.created': {
       const task = data.task as Task;
@@ -110,7 +117,8 @@ export function BoardPage() {
         if (!cancelled) setBoard(board);
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof ApiError ? err.message : 'Could not load board');
+        if (!cancelled)
+          setLoadError(err instanceof ApiError ? err.message : 'Could not load board');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -128,11 +136,19 @@ export function BoardPage() {
         void loadBoard();
         return;
       }
-      if (event.type === 'task.created' || event.type === 'task.updated' || event.type === 'task.deleted') {
+      if (
+        event.type === 'task.created' ||
+        event.type === 'task.updated' ||
+        event.type === 'task.deleted'
+      ) {
         const current = boardRef.current;
         if (!current || event.boardId !== current.id) return;
         setBoard((prev) => (prev ? applyRealtimeEvent(prev, event.type, event.data) : prev));
-      } else if (event.type === 'column.added' && boardRef.current && event.boardId === boardRef.current.id) {
+      } else if (
+        event.type === 'column.added' &&
+        boardRef.current &&
+        event.boardId === boardRef.current.id
+      ) {
         void loadBoard();
       }
     },
@@ -162,7 +178,11 @@ export function BoardPage() {
       const boardId = boardRef.current?.id;
       if (!boardId) return;
       const apply = (prev: BoardWithColumns | null): BoardWithColumns | null =>
-        prev ? applyRealtimeEvent(prev, 'task.updated', { task: { ...task, columnId, order: targetOrder } }) : prev;
+        prev
+          ? applyRealtimeEvent(prev, 'task.updated', {
+              task: { ...task, columnId, order: targetOrder },
+            })
+          : prev;
       setBoard(apply);
       setActionError(null);
       try {

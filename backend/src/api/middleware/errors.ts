@@ -58,12 +58,7 @@ export function validateParams(schema: ZodSchema) {
  * response. Expected errors (`AppError`, `ZodError`) map to their status
  * codes; anything else becomes a generic 500.
  */
-export function errorHandler(
-  err: unknown,
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (res.headersSent) {
     next(err);
     return;

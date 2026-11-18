@@ -18,7 +18,7 @@
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -35,8 +35,7 @@ body {
   font-family: var(--font);
   background:
     radial-gradient(1200px 500px at 80% -10%, rgba(99, 102, 241, 0.18), transparent 60%),
-    radial-gradient(800px 400px at 10% 0%, rgba(34, 197, 94, 0.08), transparent 50%),
-    var(--bg);
+    radial-gradient(800px 400px at 10% 0%, rgba(34, 197, 94, 0.08), transparent 50%), var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
@@ -240,7 +239,9 @@ textarea {
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.05s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.05s ease;
 }
 
 .btn:active {
@@ -339,7 +340,9 @@ textarea {
   gap: 8px;
   min-height: 110px;
   justify-content: space-between;
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .board-tile:hover {
@@ -400,7 +403,9 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .column-over {
@@ -446,7 +451,9 @@ textarea {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   cursor: grab;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .task-card:hover {

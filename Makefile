@@ -1,4 +1,4 @@
-.PHONY: help lint format install dev-backend dev-frontend migrate db-up db-down \
+.PHONY: coverage help lint format install dev-backend dev-frontend migrate db-up db-down \
         test test-backend test-frontend build docker-up docker-down \
         k8s-apply k8s-delete
 
@@ -15,6 +15,7 @@ help:
 	@echo "  make format           Format code with Prettier"
 	@echo "  make test             Run backend + frontend tests"
 	@echo "  make test-backend     Run backend tests"
+	@echo "  make coverage         Run backend tests with a coverage report"
 	@echo "  make test-frontend    Run frontend tests"
 	@echo "  make build            Build backend + frontend"
 	@echo "  make docker-up        Build & run the full stack in Docker"
@@ -53,6 +54,9 @@ test: test-backend test-frontend
 
 test-backend:
 	cd backend && npm test
+
+coverage:
+	cd backend && npm run test:coverage
 
 test-frontend:
 	cd frontend && npm test

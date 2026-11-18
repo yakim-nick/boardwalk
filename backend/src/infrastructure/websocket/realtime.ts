@@ -75,7 +75,10 @@ export class RealtimeHub implements RealtimeEventPublisher {
    * Authenticates and registers a new socket, or closes it with a
    * WebSocket close code explaining the rejection.
    */
-  private async handleConnection(ws: WebSocket, request: import('http').IncomingMessage): Promise<void> {
+  private async handleConnection(
+    ws: WebSocket,
+    request: import('http').IncomingMessage
+  ): Promise<void> {
     try {
       if (this.clients.size >= MAX_CLIENTS) {
         ws.close(1013, 'Server at capacity');

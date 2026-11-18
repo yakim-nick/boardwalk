@@ -41,7 +41,11 @@ export interface BoardService {
   createBoard(input: CreateBoardInput): Promise<Board>;
   listBoards(ownerId: string): Promise<Board[]>;
   getBoard(boardId: string, userId: string): Promise<BoardWithDetails>;
-  addColumn(boardId: string, userId: string, title: string): Promise<{ board: BoardWithDetails; event: RealtimeEvent }>;
+  addColumn(
+    boardId: string,
+    userId: string,
+    title: string
+  ): Promise<{ board: BoardWithDetails; event: RealtimeEvent }>;
   createTask(
     boardId: string,
     userId: string,
@@ -53,9 +57,5 @@ export interface BoardService {
     taskId: string,
     input: UpdateTaskInput
   ): Promise<{ task: Task; event: RealtimeEvent }>;
-  deleteTask(
-    boardId: string,
-    userId: string,
-    taskId: string
-  ): Promise<{ event: RealtimeEvent }>;
+  deleteTask(boardId: string, userId: string, taskId: string): Promise<{ event: RealtimeEvent }>;
 }

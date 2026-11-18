@@ -32,10 +32,7 @@ function reconnectDelay(attempt: number): number {
  *
  * Returns a disconnect function that stops reconnecting and closes the socket.
  */
-export function connectSocket(
-  handlers: SocketHandlers,
-  subscribeTo?: string
-): () => void {
+export function connectSocket(handlers: SocketHandlers, subscribeTo?: string): () => void {
   let socket: WebSocket | null = null;
   let closed = false;
   let reconnectTimer: number | undefined;

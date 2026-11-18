@@ -72,7 +72,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = body as ApiErrorBody | null;
-    throw new ApiError(res.status, err?.error.code ?? 'UNKNOWN', err?.error.message ?? 'Request failed');
+    throw new ApiError(
+      res.status,
+      err?.error.code ?? 'UNKNOWN',
+      err?.error.message ?? 'Request failed'
+    );
   }
 
   return (body as ApiResponse<T>).data;

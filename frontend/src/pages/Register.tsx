@@ -43,12 +43,25 @@ export function RegisterPage() {
 
         <label className="field">
           <span>Name</span>
-          <input type="text" required minLength={2} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          <input
+            type="text"
+            required
+            minLength={2}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+          />
         </label>
 
         <label className="field">
           <span>Email</span>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
         </label>
 
         <label className="field">

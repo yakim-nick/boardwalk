@@ -30,7 +30,7 @@ WebSocket fan-out through Redis, and a Docker/Kubernetes deployment.
 
 | Part | Stack |
 |------|-------|
-| Backend | Node.js 20 (Docker/CI), Express, TypeScript (strict), Prisma + PostgreSQL 16, Redis 7 (pub/sub + rate-limit store), `ws`, JWT, Zod, pino, helmet |
+| Backend | Node.js 22 (Docker/CI), Express, TypeScript (strict), Prisma + PostgreSQL 16, Redis 7 (pub/sub + rate-limit store), `ws`, JWT, Zod, pino, helmet |
 | Frontend | React 19, Vite, react-router, Vitest + Testing Library (Node 22 in Docker/CI) |
 | Infra | Docker Compose (nginx in front), Kubernetes manifests (Kustomize), GitHub Actions, Makefile |
 
@@ -82,12 +82,17 @@ and create the test database once:
 make db-up
 docker compose exec postgres createdb -U flowboard flowboard_test
 make test                            # backend (Jest, --runInBand) + frontend (Vitest)
+make coverage                        # backend tests with a coverage report
+make lint                            # ESLint + Prettier check, backend and frontend
 ```
 
 Last verified locally: backend 24 tests passing (about 69% statement coverage;
 the WebSocket hub is only about 11% covered), frontend 7 tests passing.
-CI runs typecheck, `npm audit --audit-level=high`, tests and builds, plus the
-Docker image builds. There is no linter or coverage gate yet (see Roadmap).
+CI runs, for backend and frontend: `npm audit` on production dependencies,
+typecheck, ESLint (`no-explicit-any` is an error), a Prettier check, tests and
+builds, plus the Docker image builds. The backend run enforces a coverage floor
+(65% statements, 45% branches; a regression guard, not a quality claim) and
+uploads the report as an artifact. There is no frontend coverage yet.
 
 ## Project layout
 
@@ -137,8 +142,7 @@ Full write-up with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Roadmap
 
 - Board sharing (members and roles) with realtime events for all members.
-- ESLint + Prettier, coverage reporting in CI, tests for the WebSocket hub and
-  rate limiter.
+- Tests for the WebSocket hub and the rate limiter, and frontend coverage.
 - Healthchecks in the Docker images and the smoke test in CI.
 - Better auth handling (logout, refresh tokens).
 

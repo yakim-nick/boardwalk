@@ -26,12 +26,7 @@ function createRedisStore(redis: Redis | null): RedisStore | undefined {
  * Uses Redis as the shared store so limits hold across instances and restarts;
  * disabled entirely under `NODE_ENV=test`.
  */
-function createRateLimiter(
-  redis: Redis | null,
-  minutes: number,
-  max: number,
-  message: string
-) {
+function createRateLimiter(redis: Redis | null, minutes: number, max: number, message: string) {
   if (process.env.NODE_ENV === 'test') {
     return noopMiddleware;
   }

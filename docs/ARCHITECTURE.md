@@ -204,8 +204,8 @@ the forwarded IP and the app uses `trust proxy = 1`.
   container runs `prisma migrate deploy` and then starts the server.
 - **Kubernetes:** Kustomize manifests in `infra/k8s/`, not verified against a
   live cluster in this repository.
-- **CI:** `.github/workflows/ci.yml`: audit, typecheck, tests, build, Docker
-  image builds.
+- **CI:** `.github/workflows/ci.yml`: production-dependency audit, typecheck, ESLint, Prettier
+  check, tests (backend with a coverage floor), build, and Docker image builds.
 - **Shutdown:** on SIGTERM/SIGINT the server terminates sockets, closes the
   HTTP server, disconnects Redis and Prisma, with a 10 s forced-exit timer.
 
